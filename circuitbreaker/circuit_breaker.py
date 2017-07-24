@@ -50,7 +50,7 @@ class circuit_breaker(object):
                 allowing test request to check if other end of circuit is
                 responsive
             retry_after(int): Number of max failed requests on open circuit
-                after which hte circuit will be half_open irrespective of
+                after which the circuit will be half_open irrespective of
                 retry_time
             validation_func(func): function to check if return value of wrapped
                 function is permissible. Must return boolean value
