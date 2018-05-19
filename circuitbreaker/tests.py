@@ -10,6 +10,7 @@ logging.disable(logging.CRITICAL)
 
 DEFAULT_FAILS = 3
 DEFAULT_RETRY = 1
+DEFAULT_OPEN_CIRCUIT_THREASHOLD = 5
 
 
 def validation_stub(number):
@@ -25,6 +26,7 @@ class TestBreaker(unittest.TestCase):
         self.breaker = circuit_breaker.circuit_breaker(
             allowed_fails=DEFAULT_FAILS,
             retry_time=DEFAULT_RETRY,
+            retry_after=DEFAULT_OPEN_CIRCUIT_THREASHOLD,
             validation_func=None
         )
         self.breaker_with_validation = circuit_breaker.circuit_breaker(
@@ -64,6 +66,21 @@ class TestBreaker(unittest.TestCase):
         self.assertEqual(breaker._state, circuit_breaker.OPEN)
 
         time.sleep(DEFAULT_RETRY)
+        breaker._check_state()
+        self.assertEqual(breaker._state, circuit_breaker.HALF_OPEN)
+
+    def test_open_threashold(self):
+        breaker = self.breaker
+        breaker._close()
+        for i in range(DEFAULT_FAILS):
+            breaker._on_failure()
+        self.assertEqual(breaker._state, circuit_breaker.OPEN)
+
+        for i in range(DEFAULT_OPEN_CIRCUIT_THREASHOLD):
+            try:
+                breaker._call(raises_something, KeyError())
+            except Exception:
+                pass
         breaker._check_state()
         self.assertEqual(breaker._state, circuit_breaker.HALF_OPEN)
 
@@ -117,7 +134,8 @@ class TestBreaker(unittest.TestCase):
             "allowed_exceptions": [ValueError, AttributeError],
             "failure_exceptions": [KeyError]
         }
-        self.assertRaises(ValueError,circuit_breaker.circuit_breaker, *args, **kwargs)
+        self.assertRaises(ValueError, circuit_breaker.circuit_breaker, *args,
+                          **kwargs)
 
 
 if __name__ == '__main__':
